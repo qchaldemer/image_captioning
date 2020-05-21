@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import torch.nn.functional as F
 
 
 class EncoderCNN(nn.Module):
@@ -23,10 +24,45 @@ class EncoderCNN(nn.Module):
 
 class DecoderRNN(nn.Module):
     def __init__(self, embed_size, hidden_size, vocab_size, num_layers=1):
-        pass
+        super(DecoderRNN, self).__init__()
+        
+        self.hidden_dim = hidden_size
+        
+        # embedding layer
+        self.word_embeddings = nn.Embedding(vocab_size, embed_size)
+        
+        # the LSTM takes embed features from the images
+        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
+        
+        # the linear layer that maps the hidden state output dimension
+        self.hidden2vocab = nn.Linear(hidden_size, vocab_size)
     
     def forward(self, features, captions):
-        pass
+        
+        #print(features.shape, captions.shape)
+        
+        captions = captions[:,:-1]
+        # create embedded word vectors for each word in a sentence
+        embeds = self.word_embeddings(captions)
+        
+        features = features.view(features.shape[0], 1, features.shape[1])        
+        
+        inputs = torch.cat((features, embeds), dim=1)
+        
+        #print(embeds.shape)
+        #print(inputs.shape)
+            
+        # get the output and hidden state by passing the lstm over our word embeddings
+        # the lstm takes in our embeddings and hiddent state
+        
+        lstm_out, _ = self.lstm(inputs)
+        
+        # get the scores for the most likely word 
+        vocab_outputs = self.hidden2vocab(lstm_out)
+        
+        #vocab_scores = nn.Softmax(vocab_outputs, dim=1)
+        
+        return vocab_outputs
 
     def sample(self, inputs, states=None, max_len=20):
         " accepts pre-processed image tensor (inputs) and returns predicted sentence (list of tensor ids of length max_len) "
