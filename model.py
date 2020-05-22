@@ -60,10 +60,20 @@ class DecoderRNN(nn.Module):
         # get the scores for the most likely word 
         vocab_outputs = self.hidden2vocab(lstm_out)
         
-        #vocab_scores = nn.Softmax(vocab_outputs, dim=1)
-        
         return vocab_outputs
 
     def sample(self, inputs, states=None, max_len=20):
         " accepts pre-processed image tensor (inputs) and returns predicted sentence (list of tensor ids of length max_len) "
-        pass
+        predicted_sentence = []
+        
+        for i in range(max_len):        
+            sentence_lstm, states = self.lstm(inputs, states)
+            x = self.hidden2vocab(sentence_lstm)
+            prediction = x.argmax(dim=2)
+            predicted_sentence.append(prediction[0].item())
+            inputs = self.word_embeddings(prediction)
+            #sentence_scores = nn.Softmax(sentence_outputs, dim=2)
+            #_, max_word = torch.max(sentence_scores, 1)
+
+        
+        return predicted_sentence
